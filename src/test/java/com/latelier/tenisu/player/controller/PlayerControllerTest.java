@@ -9,10 +9,12 @@ import com.latelier.tenisu.player.service.PlayerService;
 import com.latelier.tenisu.shared.error.ApiExceptionHandler;
 import com.latelier.tenisu.shared.error.DuplicatePlayerException;
 import com.latelier.tenisu.shared.error.PlayerNotFoundException;
+import com.latelier.tenisu.shared.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,13 +23,17 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PlayerController.class)
-@Import(ApiExceptionHandler.class)
+@Import({
+        ApiExceptionHandler.class,
+        SecurityConfig.class
+})
 class PlayerControllerTest {
 
     @Autowired
@@ -35,8 +41,12 @@ class PlayerControllerTest {
 
     @MockitoBean
     private PlayerService playerService;
+
     @MockitoBean
     private PlayerMapper playerMapper;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
 
     @Test
     void shouldReturnPlayers() throws Exception {
@@ -48,7 +58,7 @@ class PlayerControllerTest {
                         )
                 );
 
-        mockMvc.perform(get("/players"))
+        mockMvc.perform(get("/players").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(17))
                 .andExpect(jsonPath("$[1].id").value(52));
@@ -59,7 +69,7 @@ class PlayerControllerTest {
         when(playerService.getPlayerById(52))
                 .thenReturn(player(52, "Novak", 2));
 
-        mockMvc.perform(get("/players/52"))
+        mockMvc.perform(get("/players/52").with(jwt()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(52))
                 .andExpect(jsonPath("$.firstname").value("Novak"));
@@ -72,7 +82,7 @@ class PlayerControllerTest {
         when(playerService.getPlayerById(999))
                 .thenThrow(new PlayerNotFoundException(999));
 
-        mockMvc.perform(get("/players/999"))
+        mockMvc.perform(get("/players/999").with(jwt()))
                 .andExpect(status().isNotFound())
                 .andExpect(
                         jsonPath("$.detail")
@@ -88,7 +98,7 @@ class PlayerControllerTest {
                 .thenReturn(player(200, "Carlos", 3));
 
         mockMvc.perform(
-                        post("/players")
+                        post("/players").with(jwt())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(validRequest())
                 )
@@ -106,7 +116,7 @@ class PlayerControllerTest {
                 .thenReturn(player(200, "Carlos", 3));
 
         mockMvc.perform(
-                        post("/players")
+                        post("/players").with(jwt())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(validRequest())
                 )
@@ -139,7 +149,7 @@ class PlayerControllerTest {
             """;
 
         mockMvc.perform(
-                        post("/players")
+                        post("/players").with(jwt())
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(request)
                 )
