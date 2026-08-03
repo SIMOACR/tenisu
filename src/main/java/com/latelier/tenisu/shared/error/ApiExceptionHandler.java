@@ -41,6 +41,18 @@ public class ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(StatisticsUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleStatisticsUnavailable(
+            StatisticsUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ProblemDetail> handleConstraintViolation(
             ConstraintViolationException exception,
